@@ -20,7 +20,7 @@ pipeline {
         stage('Build') {
             steps {
                 dir('app') {
-                    sh './mvnw clean package'
+                    sh 'mvn clean package'
                 }
             }
         }
@@ -28,7 +28,7 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 dir('app') {
-                    sh './mvnw test'
+                    sh 'mvn test'
                 }
             }
         }
