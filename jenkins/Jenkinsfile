@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'ap-south-2'
+        ECR_REPOSITORY = 'enterprise-app'
+        AWS_ACCOUNT_ID = '705557196379'
+        IMAGE_TAG = "v${BUILD_NUMBER}"
+        IMAGE_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir('app') {
+                    sh './mvnw clean package'
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                dir('app') {
+                    sh './mvnw test'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('app') {
+                    sh 'docker build -t enterprise-app:${IMAGE_TAG} .'
+                }
+            }
+        }
+
+        stage('Login to Amazon ECR') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login \
+                --username AWS \
+                --password-stdin ${IMAGE_URI}
+                '''
+            }
+        }
+
+        stage('Push Image to ECR') {
+            steps {
+                sh '''
+                docker tag enterprise-app:${IMAGE_TAG} ${IMAGE_URI}:${IMAGE_TAG}
+                docker push ${IMAGE_URI}:${IMAGE_TAG}
+                '''
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo "Pipeline completed successfully."
+        }
+
+        always {
+            cleanWs()
+        }
+    }
+}
