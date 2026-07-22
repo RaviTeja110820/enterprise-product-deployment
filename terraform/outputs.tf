@@ -155,25 +155,3 @@ output "cpu_alarm" {
   value = module.cloudwatch.cpu_alarm_name
 
 }
-
-############################################################
-# Secrets Outputs
-############################################################
-
-output "database_secret_arn" {
-
-  value = module.secrets.secret_arn
-
-}
-
-output "database_secret_name" {
-
-  value = module.secrets.secret_name
-
-}
-
-output "external_secrets_role" {
-
-  value = module.iam.external_secrets_role_arn
-
-}
