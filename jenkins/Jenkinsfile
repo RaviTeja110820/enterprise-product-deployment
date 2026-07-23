@@ -53,7 +53,7 @@ pipeline {
                             sh """
                             mvn sonar:sonar \
                             -Dsonar.projectKey=RaviTeja110820_enterprise-product-deployment \
-                            -Dsonar.organization=my-sonar-pro \
+                            -Dsonar.organization=mysonarpro \
                             -Dsonar.host.url=https://sonarcloud.io \
                             -Dsonar.token=${SONAR_TOKEN}
                             """
