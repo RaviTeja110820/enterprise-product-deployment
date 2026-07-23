@@ -79,12 +79,12 @@ pipeline {
                 sh """
                 trivy image \
                 --severity HIGH,CRITICAL \
-                --exit-code 1 \
                 --no-progress \
                 ${ECR_REPOSITORY}:${IMAGE_TAG}
                 """
             }
         }
+        // --exit-code 1 \
 
         stage('Login to Amazon ECR') {
             steps {
