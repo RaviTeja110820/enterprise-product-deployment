@@ -2,15 +2,19 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'ap-south-2'
-        AWS_ACCOUNT_ID = '705557196379'
-        ECR_REPOSITORY = 'enterprise-app'
 
-        CLUSTER_NAME = 'enterprise-product-eks'
-        NAMESPACE = 'enterprise'
+        // AWS
+        AWS_REGION      = 'ap-south-2'
+        AWS_ACCOUNT_ID  = '705557196379'
+        ECR_REPOSITORY  = 'enterprise-app'
+
+        // EKS
+        CLUSTER_NAME    = 'enterprise-product-eks'
+        NAMESPACE       = 'enterprise'
         DEPLOYMENT_NAME = 'enterprise-app'
-        CONTAINER_NAME = 'enterprise-app'
+        CONTAINER_NAME  = 'enterprise-app'
 
+        // Docker
         IMAGE_TAG = "v${BUILD_NUMBER}"
         IMAGE_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}"
     }
@@ -39,6 +43,26 @@ pipeline {
             }
         }
 
+        stage('SonarCloud Analysis') {
+            steps {
+                dir('app') {
+                    withSonarQubeEnv('SonarCloud') {
+                        withCredentials([
+                            string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')
+                        ]) {
+                            sh """
+                            mvn sonar:sonar \
+                            -Dsonar.projectKey=RaviTeja110820_enterprise-product-deployment \
+                            -Dsonar.organization=my-sonar-pro \
+                            -Dsonar.host.url=https://sonarcloud.io \
+                            -Dsonar.token=${SONAR_TOKEN}
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 dir('app') {
@@ -50,10 +74,23 @@ pipeline {
             }
         }
 
+        stage('Trivy Security Scan') {
+            steps {
+                sh """
+                trivy image \
+                --severity HIGH,CRITICAL \
+                --exit-code 1 \
+                --no-progress \
+                ${ECR_REPOSITORY}:${IMAGE_TAG}
+                """
+            }
+        }
+
         stage('Login to Amazon ECR') {
             steps {
                 sh """
-                aws ecr get-login-password --region ${AWS_REGION} | \
+                aws ecr get-login-password \
+                --region ${AWS_REGION} | \
                 docker login \
                 --username AWS \
                 --password-stdin ${IMAGE_URI}
@@ -74,8 +111,8 @@ pipeline {
             steps {
                 sh """
                 aws eks update-kubeconfig \
-                  --region ${AWS_REGION} \
-                  --name ${CLUSTER_NAME}
+                --region ${AWS_REGION} \
+                --name ${CLUSTER_NAME}
                 """
             }
         }
@@ -99,39 +136,53 @@ pipeline {
             }
         }
 
-        stage('Verify Pods') {
+        stage('Verify Deployment') {
             steps {
                 sh """
+                echo "Pods:"
                 kubectl get pods -n ${NAMESPACE}
+
+                echo ""
+
+                echo "Services:"
                 kubectl get svc -n ${NAMESPACE}
+
+                echo ""
+
+                echo "Deployment:"
+                kubectl get deployment -n ${NAMESPACE}
                 """
             }
         }
-
     }
 
     post {
 
         success {
-            echo '==============================================='
-            echo 'Build Successful'
-            echo "Docker Image : ${IMAGE_URI}:${IMAGE_TAG}"
-            echo 'Application deployed successfully to Amazon EKS'
-            echo '==============================================='
+
+            echo "========================================="
+            echo "BUILD SUCCESSFUL"
+            echo "========================================="
+            echo "Image : ${IMAGE_URI}:${IMAGE_TAG}"
+            echo "Application deployed successfully to Amazon EKS"
+            echo "========================================="
         }
 
         failure {
-            echo '==============================================='
-            echo 'Build or Deployment Failed'
-            echo '==============================================='
+
+            echo "========================================="
+            echo "BUILD FAILED"
+            echo "========================================="
         }
 
         always {
+
             sh """
             docker image rm -f ${ECR_REPOSITORY}:${IMAGE_TAG} || true
             docker image rm -f ${IMAGE_URI}:${IMAGE_TAG} || true
             docker image prune -f || true
             """
+
             cleanWs()
         }
     }

@@ -144,7 +144,7 @@ resource "aws_eks_node_group" "workers" {
 
     ignore_changes = [
 
-      scaling_config[0].desired_size,
+    # scaling_config[0].desired_size,
 
       tags
 

@@ -70,11 +70,11 @@ capacity_type = "ON_DEMAND"
 # Auto Scaling Configuration
 ############################################################
 
-desired_size = 2
+desired_size = 1
 
-min_size = 2
+min_size = 1
 
-max_size = 4
+max_size = 1
 
 ############################################################
 # Kubernetes API Endpoint

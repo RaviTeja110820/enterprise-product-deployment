@@ -4,7 +4,7 @@
 
 resource "aws_iam_role" "external_secrets_role" {
 
-  name = "ExternalSecretsRole"
+  name = "${var.project_name}-${var.environment}-ExternalSecretsRole"
 
   assume_role_policy = data.aws_iam_policy_document.external_secrets_assume_role.json
 
