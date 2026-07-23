@@ -57,7 +57,7 @@ kubernetes_version = "1.30"
 node_group_name = "enterprise-product-node-group"
 
 instance_types = [
-  "t3.small"
+  "m7i-flex.large"
 ]
 
 ami_type = "AL2023_x86_64_STANDARD"
@@ -70,11 +70,11 @@ capacity_type = "ON_DEMAND"
 # Auto Scaling Configuration
 ############################################################
 
-desired_size = 1
+desired_size = 2
 
-min_size = 1
+min_size = 2
 
-max_size = 1
+max_size = 2
 
 ############################################################
 # Kubernetes API Endpoint
