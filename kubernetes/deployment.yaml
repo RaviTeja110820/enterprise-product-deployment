@@ -50,3 +50,10 @@ spec:
 
           initialDelaySeconds: 30
           periodSeconds: 15
+
+        env:
+        - name: APP_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: enterprise-secret
+              key: APP_SECRET

@@ -14,6 +14,9 @@ pipeline {
         DEPLOYMENT_NAME = 'enterprise-app'
         CONTAINER_NAME  = 'enterprise-app'
 
+        // Secrets Manager
+        SECRET_NAME     = 'enterprise-app-secret'
+
         // Docker
         IMAGE_TAG = "v${BUILD_NUMBER}"
         IMAGE_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}"
@@ -50,13 +53,13 @@ pipeline {
                         withCredentials([
                             string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')
                         ]) {
-                            sh """
+                            sh '''
                             mvn sonar:sonar \
                             -Dsonar.projectKey=RaviTeja110820_enterprise-product-deployment \
                             -Dsonar.organization=mysonarpro \
                             -Dsonar.host.url=https://sonarcloud.io \
-                            -Dsonar.token=${SONAR_TOKEN}
-                            """
+                            -Dsonar.token=$SONAR_TOKEN
+                            '''
                         }
                     }
                 }
@@ -84,7 +87,16 @@ pipeline {
                 """
             }
         }
-        // --exit-code 1 \
+
+        /*
+        For demonstration of pipeline failure:
+
+        trivy image \
+        --severity HIGH,CRITICAL \
+        --exit-code 1 \
+        --no-progress \
+        ${ECR_REPOSITORY}:${IMAGE_TAG}
+        */
 
         stage('Login to Amazon ECR') {
             steps {
@@ -117,6 +129,28 @@ pipeline {
             }
         }
 
+        stage('Inject Secret from AWS Secrets Manager') {
+            steps {
+                sh '''
+                SECRET=$(aws secretsmanager get-secret-value \
+                --secret-id $SECRET_NAME \
+                --region $AWS_REGION \
+                --query SecretString \
+                --output text)
+
+                APP_SECRET=$(echo $SECRET | jq -r '.APP_SECRET')
+
+                kubectl delete secret enterprise-secret \
+                -n $NAMESPACE \
+                --ignore-not-found
+
+                kubectl create secret generic enterprise-secret \
+                --from-literal=APP_SECRET="$APP_SECRET" \
+                -n $NAMESPACE
+                '''
+            }
+        }
+
         stage('Deploy to Amazon EKS') {
             steps {
                 sh """
@@ -139,18 +173,24 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh """
-                echo "Pods:"
+                echo "================ Pods ================"
                 kubectl get pods -n ${NAMESPACE}
 
                 echo ""
-
-                echo "Services:"
+                echo "============== Services =============="
                 kubectl get svc -n ${NAMESPACE}
 
                 echo ""
-
-                echo "Deployment:"
+                echo "============= Deployment ============="
                 kubectl get deployment -n ${NAMESPACE}
+
+                echo ""
+                echo "=============== Secret ==============="
+                kubectl get secret enterprise-secret -n ${NAMESPACE}
+
+                echo ""
+                echo "============= Secret Info ============"
+                kubectl describe secret enterprise-secret -n ${NAMESPACE}
                 """
             }
         }
@@ -159,24 +199,24 @@ pipeline {
     post {
 
         success {
-
             echo "========================================="
             echo "BUILD SUCCESSFUL"
             echo "========================================="
-            echo "Image : ${IMAGE_URI}:${IMAGE_TAG}"
+            echo "Docker Image : ${IMAGE_URI}:${IMAGE_TAG}"
+            echo "SonarCloud Analysis : SUCCESS"
+            echo "Trivy Scan : COMPLETED"
+            echo "AWS Secrets Manager : SUCCESS"
             echo "Application deployed successfully to Amazon EKS"
             echo "========================================="
         }
 
         failure {
-
             echo "========================================="
             echo "BUILD FAILED"
             echo "========================================="
         }
 
         always {
-
             sh """
             docker image rm -f ${ECR_REPOSITORY}:${IMAGE_TAG} || true
             docker image rm -f ${IMAGE_URI}:${IMAGE_TAG} || true
