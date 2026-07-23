@@ -1,0 +1,16 @@
+protocol: http
+
+elasticsearchHosts: "https://elasticsearch-master:9200"
+
+service:
+  type: LoadBalancer
+
+extraEnvs:
+  - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+    value: "6cd0024f530e51b53d8eb2a1104ee6c1"
+
+  - name: XPACK_REPORTING_ENCRYPTIONKEY
+    value: "66ff71ddc99f4cfdb99454b8fab02481"
+
+  - name: XPACK_SECURITY_ENCRYPTIONKEY
+    value: "6fd74da5aa3566fefdeac4403b1447a0"

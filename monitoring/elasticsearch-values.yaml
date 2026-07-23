@@ -6,9 +6,9 @@ replicas: 1
 
 minimumMasterNodes: 1
 
-esConfig:
-  elasticsearch.yml: |
-    discovery.type: single-node
+clusterHealthCheckParams: "wait_for_status=yellow&timeout=5s"
+
+esJavaOpts: "-Xms512m -Xmx512m"
 
 resources:
   requests:
