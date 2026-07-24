@@ -27,7 +27,7 @@ spec:
 
       - name: enterprise
 
-        image: 705557196379.dkr.ecr.ap-south-2.amazonaws.com/enterprise-app:v1
+        image: 705557196379.dkr.ecr.ap-south-2.amazonaws.com/enterprise-app:v2
 
         ports:
         - containerPort: 8080
