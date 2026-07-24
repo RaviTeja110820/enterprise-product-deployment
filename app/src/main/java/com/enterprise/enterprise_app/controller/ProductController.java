@@ -18,7 +18,7 @@ public class ProductController {
 
     @GetMapping("/")
     public String home() {
-        return "Enterprise Product Deployment Platform is Running!";
+        return "Enterprise Product Deployment Platform is Running!-->>Blue Deployment<<--";
     }
 
     @GetMapping("/health")

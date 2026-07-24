@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: enterprise-green
+  namespace: enterprise
+
+spec:
+
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: enterprise
+      version: green
+
+  template:
+
+    metadata:
+      labels:
+        app: enterprise
+        version: green
+
+    spec:
+
+      containers:
+
+      - name: enterprise
+
+        image: 705557196379.dkr.ecr.ap-south-2.amazonaws.com/enterprise-app:v19
+
+        ports:
+        - containerPort: 8080
