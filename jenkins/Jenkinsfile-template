@@ -1,0 +1,149 @@
+pipeline {
+
+    agent any
+
+    parameters {
+
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'stage', 'prod'],
+            description: 'Deployment Environment'
+        )
+
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: 'latest',
+            description: 'Docker Image Tag'
+        )
+
+        string(
+            name: 'NAMESPACE',
+            defaultValue: 'enterprise',
+            description: 'Kubernetes Namespace'
+        )
+
+        string(
+            name: 'REPLICAS',
+            defaultValue: '2',
+            description: 'Number of Replicas'
+        )
+
+        choice(
+            name: 'AWS_REGION',
+            choices: ['ap-south-2'],
+            description: 'AWS Region'
+        )
+
+        string(
+            name: 'CLUSTER_NAME',
+            defaultValue: 'enterprise-product-eks',
+            description: 'EKS Cluster'
+        )
+
+    }
+
+    environment {
+
+        AWS_ACCOUNT = "705557196379"
+        ECR_REPOSITORY = "enterprise-product"
+
+    }
+
+    stages {
+
+        stage('Show Parameters') {
+
+            steps {
+
+                echo "Environment : ${params.ENVIRONMENT}"
+                echo "Image Tag   : ${params.IMAGE_TAG}"
+                echo "Namespace   : ${params.NAMESPACE}"
+                echo "Replicas    : ${params.REPLICAS}"
+                echo "Cluster     : ${params.CLUSTER_NAME}"
+
+            }
+
+        }
+
+        stage('Configure kubectl') {
+
+            steps {
+
+                sh """
+                aws eks update-kubeconfig \
+                  --region ${params.AWS_REGION} \
+                  --name ${params.CLUSTER_NAME}
+                """
+
+            }
+
+        }
+
+        stage('Create Namespace') {
+
+            steps {
+
+                sh """
+                kubectl create namespace ${params.NAMESPACE} \
+                --dry-run=client -o yaml | kubectl apply -f -
+                """
+
+            }
+
+        }
+
+        stage('Deploy Application') {
+
+            steps {
+
+                sh """
+
+                kubectl apply -f kubernetes/namespace.yaml
+
+                kubectl apply -f kubernetes/service.yaml
+
+                kubectl apply -f kubernetes/deployment.yaml
+
+                """
+
+            }
+
+        }
+
+        stage('Scale Deployment') {
+
+            steps {
+
+                sh """
+
+                kubectl scale deployment enterprise-app \
+                --replicas=${params.REPLICAS} \
+                -n ${params.NAMESPACE}
+
+                """
+
+            }
+
+        }
+
+        stage('Verify Deployment') {
+
+            steps {
+
+                sh """
+
+                kubectl get pods -n ${params.NAMESPACE}
+
+                kubectl get svc -n ${params.NAMESPACE}
+
+                kubectl get deployment -n ${params.NAMESPACE}
+
+                """
+
+            }
+
+        }
+
+    }
+
+}
